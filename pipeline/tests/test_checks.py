@@ -220,3 +220,43 @@ def test_new_file_under_ai_is_caught_by_protected_paths_not_only_scope():
         assert "protected_paths" in v.checks_fired(), (
             f"{new_file} not caught by protected_paths: {sorted(v.checks_fired())}"
         )
+
+
+# --------------------------------------------------------- drift definition
+#
+# protected_paths asks "may the worker write this"; drift asks "does a change
+# here invalidate the plan". They are different lists.
+
+from orchestrator.checks import check_base_binding  # noqa: E402
+
+DRIFT_POLICY = Policy(
+    scope_allowed=("src/**",),
+    protected_paths=(".ai/**",),
+    trusted_test_paths=("tests/regression/**",),
+)
+
+
+def _binding(drift):
+    return check_base_binding(
+        "b" * 40,
+        {"base_commit": "a" * 40},
+        approved_base_is_ancestor=True,
+        drift_paths=drift,
+        policy=DRIFT_POLICY,
+    )
+
+
+@pytest.mark.parametrize(
+    "path", [".ai/DECISIONS.md", ".ai/LESSONS_LEARNED.md", ".ai/VERIFIED.md"]
+)
+def test_audit_trail_writes_do_not_invalidate_the_approval(path):
+    findings = _binding([path])
+    assert [f.severity for f in findings] == ["warning"], findings
+
+
+@pytest.mark.parametrize(
+    "path", [".ai/POLICY.yaml", "tests/regression/test_score.py", "src/scoring.py"]
+)
+def test_policy_graded_tests_and_scope_changes_invalidate_the_approval(path):
+    findings = _binding([path])
+    assert any(f.check == "base_binding" and f.severity == "blocking" for f in findings)

@@ -142,3 +142,36 @@ def test_missing_policy_at_base_fails_closed(repo, capsys):
     code = ci_check.main(["--repo", str(repo), "--base", "no-such-ref", "--head", "feature"])
     out = capsys.readouterr().out
     assert code != 0 and "BLOCKED" in out, out
+
+
+# ---- drift: which commits between base_commit and the branch point re-block
+
+def _advance_main_then_branch(repo: Path, rel: str, text: str) -> None:
+    """Commit `rel` to main after the approval, then branch an honest change."""
+    write(repo, rel, text)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", f"main advances: {rel}")
+    git(repo, "checkout", "-qb", "honest")
+    write(repo, "src/a.py", "x = 5\n")
+    git(repo, "commit", "-qam", "honest change")
+
+
+def test_audit_trail_write_between_base_and_branch_does_not_block(repo, capsys):
+    _advance_main_then_branch(repo, ".ai/DECISIONS.md", "# decisions\n")
+    code, out = run(repo, "honest", capsys)
+    assert code == 0, out
+    assert "WARNING" in out and "base_binding" in out, out
+
+
+@pytest.mark.parametrize(
+    "rel,text",
+    [
+        (".ai/POLICY.yaml", STRICT_POLICY + "# touched\n"),
+        ("tests/regression/test_x.py", "def test_x():\n    assert True\n"),
+    ],
+)
+def test_policy_or_graded_test_change_between_base_and_branch_blocks(repo, capsys, rel, text):
+    _advance_main_then_branch(repo, rel, text)
+    code, out = run(repo, "honest", capsys)
+    assert code != 0, out
+    assert "BLOCKING base_binding" in out, out

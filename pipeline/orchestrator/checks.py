@@ -255,6 +255,10 @@ def check_plan_binding(plan_bytes: bytes, approval: dict) -> list[Finding]:
     return []
 
 
+# Governance files whose change invalidates an approved plan (they define scope).
+DRIFT_POLICY_FILES: tuple[str, ...] = (".ai/POLICY.yaml",)
+
+
 def check_base_binding(
     actual_base: str,
     approval: dict,
@@ -295,8 +299,13 @@ def check_base_binding(
                         f"the approved base {expected[:12]}")]
     relevant: tuple[str, ...] = ()
     if policy is not None and drift_paths:
-        guarded = (policy.scope_allowed + policy.protected_paths
-                   + policy.trusted_test_paths)
+        # Drift asks "does a change here invalidate the plan", which is a
+        # different question from protected_paths' "may the worker write this".
+        # Using one list for both made every audit-trail write invalidate the
+        # approval. POLICY.yaml stays because it defines scope; records such as
+        # DECISIONS.md are not inputs to correctness.
+        guarded = (policy.scope_allowed + policy.trusted_test_paths
+                   + DRIFT_POLICY_FILES)
         relevant = _matching(drift_paths, guarded)
     if relevant:
         return [Finding("base_binding", BLOCKING,

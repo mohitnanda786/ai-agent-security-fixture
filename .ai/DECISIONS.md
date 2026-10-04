@@ -196,3 +196,45 @@ uncovered once the task closes; the test now says so.
 
 The run merged on is the one after this entry's push; its verdict is posted as
 a comment on PR #10 (an entry cannot quote the run its own commit triggers).
+
+## 2026-10-04 — Drift is not protected_paths (PR #12)
+
+**What changed.** In `check_base_binding` the drift set (`guarded`) was
+`scope_allowed + protected_paths + trusted_test_paths`; it is now
+`scope_allowed + trusted_test_paths + (".ai/POLICY.yaml",)`
+(`DRIFT_POLICY_FILES`). `protected_paths` is unchanged: those files stay
+unwritable by a worker.
+
+**Why.** `protected_paths` answers "may the worker write this"; drift answers
+"does a change here invalidate the plan". One list for both meant every
+audit-trail write invalidated the approval, including the write that records
+the re-approval (observed: six consecutive PRs blocked, and the re-approval PR
+could not leave a record without re-breaking itself). `POLICY.yaml` stays in
+the drift set because it defines scope. `DECISIONS.md`, `LESSONS_LEARNED.md`
+and `VERIFIED.md` leave it: they are records, not inputs to correctness.
+
+**PLAN.md and APPROVAL.json also leave the drift set.** `plan_binding`
+already compares the plan hash on every run, so a changed plan is caught
+there (and by `protected_paths`). The approval commit lands after
+`base_commit` by construction, so it would always drift against itself.
+
+**Is the `own` APPROVAL.json exclusion in `ci_check` now dead code?** Yes,
+under the current policy. `.ai/tasks/*/APPROVAL.json` matches none of
+`scope_allowed`, `trusted_test_paths` or `POLICY.yaml`, so it can never be
+drift. Checked: with the exclusion removed, all 53 tests still pass and a
+probe branch against current main still gets only a `base_binding` warning —
+no test covers the exclusion. It is not removed here (not asked). It would
+become live again if a future policy put approval files in scope or
+`trusted_test_paths`; either delete it or add a test that needs it.
+
+**Test coverage.** The 53 tests now include `ci_check` running against real
+git history (`tests/test_ci_check.py`: base-ref policy, forged approval,
+drift between `base_commit` and the branch point). Unit tests on `gate.py`
+passed throughout while `ci_check.py` was broken on main. The gap was
+integration coverage, not test count. New drift tests fail against the old
+`checks.py` (4 failures); the must-block cases pass before and after.
+
+**This PR is its own test.** It is judged against the fresh approval from
+#11 (`base_commit` d04ca23) and carries this `DECISIONS.md` write.
+`base_binding` should warn, not block. The run's full verdict is posted as a
+comment on PR #12 — an entry cannot quote the run its own commit triggers.
