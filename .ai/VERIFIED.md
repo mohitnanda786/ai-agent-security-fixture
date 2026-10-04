@@ -90,3 +90,29 @@ Not yet run: the protected-path probe PR (weaken `POLICY.yaml`).
 - **`base_binding` re-approval path has never been exercised.** It fired as a
   block on PRs #2 and #3 (main advanced and touched `ci.yml`), but no
   re-approval was performed to confirm the path clears.
+
+## Control defects found during construction — 2026-10-04
+
+Eight defects in the controls, **none found by the adversarial suite**. The
+replay stayed 15/15 green throughout, including while `ci_check` was
+self-evaluating, `protected_paths` was stale and drift was self-poisoning. One
+root cause: the replay drives `gate.py`, while CI runs `ci_check.py`; unit
+tests on `gate.py` passed while `ci_check.py` was broken on `main`. The gap
+was integration coverage, not test count. (The one time the replay did catch a
+regression was a proposed `src/**` scope, 14/15; that was before merge.)
+
+| # | Defect | How it surfaced |
+| --- | --- | --- |
+| 1 | `ci_check` read policy, approval and `PLAN.md` from the checked-out head: a PR was graded by its own `POLICY.yaml` | Reading a verdict: `protected_paths` fired on a file the base policy did not list; confirmed with a debug step that printed base vs working-tree policy |
+| 2 | `protected_paths` enumerated `.ai/` files, not the namespace; later files were unguarded by that layer for five commits | Reading PR #5's verdict: only `scope` fired on `LESSONS_LEARNED.md` |
+| 3 | `pipeline/orchestrator`, `harness`, `tests` in CODEOWNERS but not in `protected_paths` / `trusted_test_paths` | Reading PR #8's verdict: `protected_paths` did not fire on `pipeline/orchestrator/*.py` |
+| 4 | Nine tracked files covered by no layer (CODEOWNERS covered one); `.gitattributes` can change the bytes `plan_hash` covers | A scripted audit of tracked paths against the real policy |
+| 5 | Drift borrowed `protected_paths`: every audit-trail write invalidated the approval, including the one recording the re-approval (six consecutive PRs blocked) | Working through what re-approval would require; confirmed in the re-approval PR |
+| 6 | Drift borrowed `trusted_test_paths`: every orchestrator test change forced a re-approval | PR #13's run after #12 changed two test files |
+| 7 | The pre-existing ruleset required 0 approvals, no code-owner review, no status checks; an Admin `bypass_mode: always` was then added | A rejected push led to reading the ruleset over the API; re-read after an unexplained `updated_at` |
+| 8 | `pipeline-unit-tests` could not import `orchestrator` in CI (bare `pytest`); a control job had never run green | The first CI run on `main` |
+
+**Stale open item.** "`base_binding` re-approval path has never been
+exercised" (above) is no longer true: it was run (PR #11), and doing so
+exposed defects 5 and 6. What remains untested is a worker credential without
+admin and a second account for code-owner review.
