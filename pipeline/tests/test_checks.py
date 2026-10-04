@@ -232,7 +232,7 @@ from orchestrator.checks import check_base_binding  # noqa: E402
 DRIFT_POLICY = Policy(
     scope_allowed=("src/**",),
     protected_paths=(".ai/**",),
-    trusted_test_paths=("tests/regression/**",),
+    trusted_test_paths=("tests/regression/**", "pipeline/tests/**", ".ai/tasks/*/acceptance/**"),
 )
 
 
@@ -247,7 +247,14 @@ def _binding(drift):
 
 
 @pytest.mark.parametrize(
-    "path", [".ai/DECISIONS.md", ".ai/LESSONS_LEARNED.md", ".ai/VERIFIED.md"]
+    "path",
+    [
+        ".ai/DECISIONS.md",
+        ".ai/LESSONS_LEARNED.md",
+        ".ai/VERIFIED.md",
+        "pipeline/tests/test_checks.py",  # trusted, but not an input to any task
+        "pipeline/orchestrator/checks.py",
+    ],
 )
 def test_audit_trail_writes_do_not_invalidate_the_approval(path):
     findings = _binding([path])
@@ -255,8 +262,24 @@ def test_audit_trail_writes_do_not_invalidate_the_approval(path):
 
 
 @pytest.mark.parametrize(
-    "path", [".ai/POLICY.yaml", "tests/regression/test_score.py", "src/scoring.py"]
+    "path",
+    [
+        ".ai/POLICY.yaml",
+        "tests/regression/test_score.py",
+        ".ai/tasks/TASK-0042/acceptance/test_acceptance.py",
+        "src/scoring.py",
+    ],
 )
 def test_policy_graded_tests_and_scope_changes_invalidate_the_approval(path):
     findings = _binding([path])
     assert any(f.check == "base_binding" and f.severity == "blocking" for f in findings)
+
+
+def test_drift_set_is_stated_not_borrowed():
+    from orchestrator.checks import DRIFT_PATHS
+
+    assert DRIFT_PATHS == (
+        ".ai/tasks/*/acceptance/**",
+        "tests/regression/**",
+        ".ai/POLICY.yaml",
+    )

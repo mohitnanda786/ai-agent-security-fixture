@@ -156,8 +156,11 @@ def _advance_main_then_branch(repo: Path, rel: str, text: str) -> None:
     git(repo, "commit", "-qam", "honest change")
 
 
-def test_audit_trail_write_between_base_and_branch_does_not_block(repo, capsys):
-    _advance_main_then_branch(repo, ".ai/DECISIONS.md", "# decisions\n")
+@pytest.mark.parametrize(
+    "rel", [".ai/DECISIONS.md", "pipeline/tests/test_orch.py", "pipeline/orchestrator/x.py"]
+)
+def test_audit_trail_write_between_base_and_branch_does_not_block(repo, capsys, rel):
+    _advance_main_then_branch(repo, rel, "# change\n")
     code, out = run(repo, "honest", capsys)
     assert code == 0, out
     assert "WARNING" in out and "base_binding" in out, out
@@ -168,6 +171,7 @@ def test_audit_trail_write_between_base_and_branch_does_not_block(repo, capsys):
     [
         (".ai/POLICY.yaml", STRICT_POLICY + "# touched\n"),
         ("tests/regression/test_x.py", "def test_x():\n    assert True\n"),
+        (f".ai/tasks/{TASK}/acceptance/test_a.py", "def test_a():\n    assert True\n"),
     ],
 )
 def test_policy_or_graded_test_change_between_base_and_branch_blocks(repo, capsys, rel, text):

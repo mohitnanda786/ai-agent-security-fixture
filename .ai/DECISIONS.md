@@ -238,3 +238,37 @@ integration coverage, not test count. New drift tests fail against the old
 #11 (`base_commit` d04ca23) and carries this `DECISIONS.md` write.
 `base_binding` should warn, not block. The run's full verdict is posted as a
 comment on PR #12 — an entry cannot quote the run its own commit triggers.
+
+## 2026-10-04 — Drift is a named constant, narrower than trusted tests (PR #14)
+
+**What changed.** `check_base_binding` now uses `policy.scope_allowed +
+DRIFT_PATHS`, where `DRIFT_PATHS` is a constant in `checks.py`:
+`.ai/tasks/*/acceptance/**`, `tests/regression/**`, `.ai/POLICY.yaml`.
+Previously `scope_allowed + trusted_test_paths + POLICY.yaml` (PR #12), and
+before that it also borrowed `protected_paths`.
+
+**Why.** `trusted_test_paths` answers "may the worker write this"; drift
+answers "does a change here invalidate the plan". Orchestrator tests under
+`pipeline/tests/**` are trusted but are not an input to any task's
+correctness, so every orchestrator test change was forcing a re-approval
+(observed on PR #13 after #12 changed two test files). Same conflation as the
+`protected_paths` case, one layer down. Drift had now been wrong twice by
+borrowing another list, so it is stated outright and tested directly
+(`test_drift_set_is_stated_not_borrowed`).
+
+**Tests (60 pass, replay 15/15).** Unit and `ci_check`-on-real-git: commits to
+`pipeline/tests/**`, `pipeline/orchestrator/**` and `.ai/DECISIONS.md` between
+base and branch point warn; commits to `tests/regression/**`,
+`.ai/tasks/*/acceptance/**` and `.ai/POLICY.yaml` block. Against the previous
+`checks.py` three of these fail (unit pipeline/tests warn, constant import,
+acceptance integration block).
+
+**Known limitation.** `scope_allowed` stays policy-derived (it differs per
+task), but `tests/regression/**` is now hard-coded in `DRIFT_PATHS` while the
+policy still configures regression paths in `trusted_test_paths`. If the
+policy renames the regression suite, drift will not follow until the constant
+is edited; no test ties the two together.
+
+**Next.** The clean data point is PR #13 (a DECISIONS.md-only write) rebased
+onto this once merged. This PR's own run cannot test that; its verdict is in a
+comment on PR #14.
