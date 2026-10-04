@@ -255,8 +255,20 @@ def check_plan_binding(plan_bytes: bytes, approval: dict) -> list[Finding]:
     return []
 
 
-# Governance files whose change invalidates an approved plan (they define scope).
-DRIFT_POLICY_FILES: tuple[str, ...] = (".ai/POLICY.yaml",)
+# What counts as drift: files whose change on main invalidates an approved plan.
+# Stated outright, not borrowed from another list. protected_paths answers "may
+# the worker write this" and trusted_test_paths the same for graded tests;
+# drift asks "is this an input to a task's correctness". Borrowing those lists
+# was wrong twice. The task's own scope_allowed is added at the call site
+# because it differs per task.
+#   - the acceptance tests a plan is approved against
+#   - the regression suite every task must keep green
+#   - the policy, because it defines scope
+DRIFT_PATHS: tuple[str, ...] = (
+    ".ai/tasks/*/acceptance/**",
+    "tests/regression/**",
+    ".ai/POLICY.yaml",
+)
 
 
 def check_base_binding(
@@ -299,13 +311,7 @@ def check_base_binding(
                         f"the approved base {expected[:12]}")]
     relevant: tuple[str, ...] = ()
     if policy is not None and drift_paths:
-        # Drift asks "does a change here invalidate the plan", which is a
-        # different question from protected_paths' "may the worker write this".
-        # Using one list for both made every audit-trail write invalidate the
-        # approval. POLICY.yaml stays because it defines scope; records such as
-        # DECISIONS.md are not inputs to correctness.
-        guarded = (policy.scope_allowed + policy.trusted_test_paths
-                   + DRIFT_POLICY_FILES)
+        guarded = policy.scope_allowed + DRIFT_PATHS
         relevant = _matching(drift_paths, guarded)
     if relevant:
         return [Finding("base_binding", BLOCKING,
