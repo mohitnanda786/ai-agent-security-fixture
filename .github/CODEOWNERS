@@ -1,0 +1,9 @@
+# Mirrors protected_paths and trusted_test_paths in .ai/POLICY.yaml.
+# If you edit one, edit the other — a mismatch means one layer guards a file
+# the other does not, and the gap is silent.
+
+/.ai/                       @mohitnanda786
+/tests/regression/          @mohitnanda786
+/.github/                   @mohitnanda786
+/pipeline/orchestrator/     @mohitnanda786
+/pyproject.toml             @mohitnanda786

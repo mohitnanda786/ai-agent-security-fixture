@@ -1,0 +1,73 @@
+name: trusted
+
+# The grading environment. Runs from a clean checkout, never from a worker's
+# working tree. Make this a required status check in the branch ruleset, and
+# keep .github/ in CODEOWNERS so a worker cannot edit what grades it.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml pytest
+      - name: Scope, protected paths, test integrity, plan binding, budgets
+        working-directory: pipeline
+        run: |
+          python -m orchestrator.ci_check \
+            --repo .. \
+            --base origin/${{ github.base_ref || 'main' }} \
+            --head ${{ github.sha }}
+
+  trusted-suites:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest
+      - name: Regression suite (guards main)
+        run: pytest -q tests/regression
+      - name: Acceptance suite (grades the task on its PR)
+        if: github.event_name == 'pull_request'
+        run: pytest -q .ai/tasks/*/acceptance
+
+  pipeline-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest pyyaml
+      - run: pytest -q tests
+        working-directory: pipeline
+
+  adversarial-replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest pyyaml
+      - name: Replay every attack scenario
+        working-directory: pipeline
+        run: |
+          git config --global user.email ci@local
+          git config --global user.name ci
+          git config --global init.defaultBranch main
+          python -m harness.replay

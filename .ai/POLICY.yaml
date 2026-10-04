@@ -1,0 +1,30 @@
+scope:
+  allowed:
+    - src/scoring.py
+    - tests/worker/**
+  forbidden:
+    - .github/workflows/**
+
+protected_paths:
+  - .ai/POLICY.yaml
+  - .ai/DOR.md
+  - .ai/DOD.md
+  - .ai/tasks/*/PLAN.md
+  - .ai/tasks/*/APPROVAL.json
+  - .ai/tasks/*/PLAN_REVIEW.json
+
+trusted_test_paths:
+  - tests/regression/**
+  - .ai/tasks/*/acceptance/**
+  - .github/workflows/**
+  - "**/conftest.py"
+  - pyproject.toml
+  - pytest.ini
+  - .coveragerc
+
+budget:
+  max_files_changed: 10
+  max_diff_lines: 400
+  max_worker_attempts: 3
+  max_plan_revisions: 2
+  max_ci_failures: 3
