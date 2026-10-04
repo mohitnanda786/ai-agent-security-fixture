@@ -6,4 +6,6 @@
 /tests/regression/          @mohitnanda786
 /.github/                   @mohitnanda786
 /pipeline/orchestrator/     @mohitnanda786
+/pipeline/harness/          @mohitnanda786
+/pipeline/tests/            @mohitnanda786
 /pyproject.toml             @mohitnanda786

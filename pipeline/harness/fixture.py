@@ -111,6 +111,8 @@ POLICY = """scope:
 
 protected_paths:
   - .ai/**
+  - pipeline/orchestrator/**
+  - pipeline/harness/**
 
 trusted_test_paths:
   - tests/regression/**
@@ -120,6 +122,7 @@ trusted_test_paths:
   - pyproject.toml
   - pytest.ini
   - .coveragerc
+  - pipeline/tests/**
 
 budget:
   max_files_changed: 10
