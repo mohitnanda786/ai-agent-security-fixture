@@ -10,6 +10,7 @@ check cannot, as long as branch protection holds.
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -19,16 +20,14 @@ from orchestrator.checks import (
     validate_policy,
     verify_implementation,
 )
-from orchestrator.repo import changed_paths, diff_line_count, load_approval, load_policy
-
-
-def _show(repo: Path, ref: str, path: str) -> bytes:
-    proc = subprocess.run(
-        ["git", "-C", str(repo), "show", f"{ref}:{path}"],
-        capture_output=True,
-        timeout=30,
-    )
-    return proc.stdout if proc.returncode == 0 else b""
+from orchestrator.repo import (
+    GitError,
+    changed_paths,
+    diff_line_count,
+    list_tree,
+    parse_policy,
+    show,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -40,10 +39,17 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     repo = Path(args.repo).resolve()
-    policy = load_policy(repo / ".ai/POLICY.yaml")
+
+    # Everything that decides the verdict comes from the base ref. The head is
+    # the thing being judged; it must never supply the rules, the approval or
+    # the plan it is judged against.
     try:
+        policy = parse_policy(
+            show(repo, args.base, ".ai/POLICY.yaml").decode(),
+            source=f"{args.base}:.ai/POLICY.yaml",
+        )
         validate_policy(policy)
-    except PolicyConflict as exc:
+    except (GitError, PolicyConflict) as exc:
         print(f"BLOCKED  policy: {exc}")
         return 1
 
@@ -54,13 +60,22 @@ def main(argv: list[str] | None = None) -> int:
 
     task = args.task
     if task is None:
-        tasks = sorted(p.name for p in (repo / ".ai/tasks").glob("TASK-*"))
+        try:
+            names = list_tree(repo, args.base, ".ai/tasks")
+        except GitError:
+            names = []
+        tasks = sorted(n for n in names if n.startswith("TASK-"))
         if not tasks:
             print("BLOCKED  no task directory under .ai/tasks")
             return 1
         task = tasks[-1]
 
-    approval = load_approval(repo / f".ai/tasks/{task}/APPROVAL.json")
+    try:
+        approval = json.loads(show(repo, args.base, f".ai/tasks/{task}/APPROVAL.json"))
+        plan_bytes = show(repo, args.base, f".ai/tasks/{task}/PLAN.md")
+    except (GitError, ValueError) as exc:
+        print(f"BLOCKED  approval: {exc}")
+        return 1
     merge_base = subprocess.run(
         ["git", "-C", str(repo), "merge-base", args.base, args.head],
         capture_output=True, text=True, timeout=30,
@@ -89,7 +104,7 @@ def main(argv: list[str] | None = None) -> int:
         changed=changed,
         policy=policy,
         approval=approval,
-        plan_bytes=_show(repo, args.head, f".ai/tasks/{task}/PLAN.md"),
+        plan_bytes=plan_bytes,
         actual_base=merge_base,
         diff_lines=diff_line_count(repo, args.base, args.head),
         approved_base_is_ancestor=is_ancestor,
