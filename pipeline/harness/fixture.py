@@ -105,6 +105,7 @@ def test_boundaries_are_inclusive():
 POLICY = """scope:
   allowed:
     - src/scoring.py
+    - src/__init__.py
     - tests/worker/**
   forbidden:
     - .github/workflows/**
@@ -113,6 +114,10 @@ protected_paths:
   - .ai/**
   - pipeline/orchestrator/**
   - pipeline/harness/**
+  - .github/**
+  - bootstrap.py
+  - bootstrap.sh
+  - .gitattributes
 
 trusted_test_paths:
   - tests/regression/**
