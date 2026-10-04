@@ -1,3 +1,4 @@
+# PROBE-MARKER: edit made in the PR, harmless comment
 scope:
   allowed:
     - src/scoring.py

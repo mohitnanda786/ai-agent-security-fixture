@@ -23,6 +23,15 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install pyyaml pytest
+      - name: DEBUG base resolution (scratch)
+        run: |
+          echo "event=${{ github.event_name }} base_ref=${{ github.base_ref }} sha=${{ github.sha }}"
+          git rev-parse origin/main HEAD ${{ github.sha }}
+          git log --oneline -3 origin/main
+          echo "--- origin/main:.ai/POLICY.yaml (head -20)"
+          git show origin/main:.ai/POLICY.yaml | head -20
+          echo "--- working tree .ai/POLICY.yaml (head -20)"
+          head -20 .ai/POLICY.yaml
       - name: Scope, protected paths, test integrity, plan binding, budgets
         working-directory: pipeline
         run: |
