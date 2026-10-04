@@ -201,3 +201,22 @@ def test_weak_test_attack_is_not_caught_by_this_layer():
     """
     v = verify(["src/pushups/score.py", "tests/worker/pushups/test_score.py"])
     assert v.ok, "unexpected: the deterministic layer caught this after all"
+
+
+# A protected_paths list that enumerates files goes stale as files are added.
+# The real policy must guard the .ai/ namespace, and the layer itself must
+# catch a new file there, independent of scope.
+def test_new_file_under_ai_is_caught_by_protected_paths_not_only_scope():
+    from dataclasses import replace
+    from pathlib import Path
+
+    from orchestrator.repo import load_policy
+
+    real = load_policy(Path(__file__).resolve().parents[2] / ".ai/POLICY.yaml")
+    # Widen scope to cover .ai/ so scope cannot be what catches the file.
+    policy = replace(real, scope_allowed=real.scope_allowed + (".ai/**",))
+    for new_file in (".ai/NEW_FILE.md", ".ai/notes/deep/x.txt", ".ai/tasks/TASK-9/anything.md"):
+        v = verify([new_file], policy=policy)
+        assert "protected_paths" in v.checks_fired(), (
+            f"{new_file} not caught by protected_paths: {sorted(v.checks_fired())}"
+        )
