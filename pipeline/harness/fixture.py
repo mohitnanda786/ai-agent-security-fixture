@@ -110,12 +110,7 @@ POLICY = """scope:
     - .github/workflows/**
 
 protected_paths:
-  - .ai/POLICY.yaml
-  - .ai/DOR.md
-  - .ai/DOD.md
-  - .ai/tasks/*/PLAN.md
-  - .ai/tasks/*/APPROVAL.json
-  - .ai/tasks/*/PLAN_REVIEW.json
+  - .ai/**
 
 trusted_test_paths:
   - tests/regression/**

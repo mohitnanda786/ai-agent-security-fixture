@@ -31,3 +31,13 @@ An example command containing a placeholder PR number (`<n>`) was read as an
 instruction. The agent correctly refused to guess. Worth noting that
 instructions to an agent carry no marker distinguishing an example from a
 directive.
+
+## 2026-10-04 — protected_paths enumerated members instead of the namespace
+
+`protected_paths` listed individual `.ai/` files rather than guarding `.ai/**`.
+Files added later (`VERIFIED.md`, `DECISIONS.md`, `LESSONS_LEARNED.md`) were
+unguarded by that layer for five commits; only `scope` stopped them.
+CODEOWNERS covered the whole directory and did not have the gap. Fixed by
+`.ai/**` and a regression test that loads the real policy and asserts a new
+file under `.ai/` is caught by `protected_paths` independent of scope. Found
+because a verdict was read rather than assumed.
