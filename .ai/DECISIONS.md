@@ -70,3 +70,50 @@ itself protected and under CODEOWNERS, which contains this, but the policy
 that grades a change should come from the base. Not fixed here; open.
 
 Overridden knowingly: verdicts read before merging.
+
+## 2026-10-04 — ci_check reads everything from the base ref (PR #8)
+
+**What changed.** `ci_check` loads policy, `APPROVAL.json`, `PLAN.md` and the
+task list from `args.base` only (`parse_policy(show(...))`, `list_tree` =
+`git ls-tree --name-only <base>:.ai/tasks`); nothing from disk, nothing from
+`args.head` except to compute the diff. Local `_show` deleted. `repo.py` gains
+`show`, `list_tree`, `parse_policy` (`load_policy` now wraps it). A missing
+file at base fails closed (`BLOCKED`). The drift exclusion for the task's own
+`APPROVAL.json` and the `approved_base_is_ancestor` / `drift_paths` arguments
+were present and are unchanged. New `tests/test_ci_check.py` runs `ci_check`
+on real git repos: a branch that weakens `POLICY.yaml` (and one that also
+forges `APPROVAL.json`/`PLAN.md`) is still judged by the base policy; an
+uncommitted weak policy on disk is ignored. Run against the old `ci_check`,
+the weaken and forge tests fail and the missing-base test crashes; with the fix
+41 unit tests pass and replay is 15/15.
+
+**Item 5 — what did not survive.** Nothing was lost. `parse_policy` and `show`
+never existed in `repo.py` on main, in `ai-agent-security-fixture.zip`, in
+`pipeline-windows-fixes.zip`, or in the loose files under `E:\Multi AI`:
+there was no fixed `ci_check` to lose, so it was written here. Diffs (CRLF
+ignored): `ci_check.py`, `repo.py`, `checks.py` identical to the original zip;
+`gate.py` and `mutate.py` differ only by the Windows patches (tarfile extract,
+`force_rmtree`), which match `pipeline-windows-fixes.zip` exactly; `fixture.py`
+differs from that zip only by the intended `.ai/**` change (PR #6). The loose
+`checks.py` is an older copy (no drift-aware `check_base_binding`).
+Unrelated: `mutate.force_rmtree` is defined but `replay.py` has its own
+inline copy; not used from `mutate`.
+
+**Trade-off.** With `PLAN.md` read from base, `plan_binding` no longer sees a
+head-side plan swap; `protected_paths` (`.ai/**`) and `gate.py`'s
+"PLAN.md differs on the branch" check cover it.
+
+**Actual verdict, quoted (run 37202233989):**
+- `deterministic-checks`: FAIL — "blocked by base_binding, scope".
+  - BLOCKING scope [pipeline/orchestrator/ci_check.py, pipeline/orchestrator/repo.py,
+    pipeline/tests/test_ci_check.py]
+  - BLOCKING base_binding: main advanced since approval and touched
+    [.ai/DECISIONS.md, .ai/LESSONS_LEARNED.md, .ai/POLICY.yaml,
+    .ai/VERIFIED.md, .github/workflows/ci.yml]
+  - `protected_paths` did **not** fire: `pipeline/orchestrator/` is under
+    CODEOWNERS but not in `protected_paths`, and `pipeline/tests/` is in
+    neither. Same class as the `.ai/` gap; open.
+- `trusted-suites`: FAIL — 4 failed (acceptance vs unimplemented `clamp_score`, by design).
+- `adversarial-replay`, `pipeline-unit-tests`: pass.
+
+Overridden knowingly: verdict read before merging.
