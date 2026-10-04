@@ -162,3 +162,37 @@ itself):**
   caught only by `scope` — the old gap this PR closes.
 
 Overridden knowingly: verdict read before merging.
+
+## 2026-10-04 — Close coverage gaps; coverage test (PR #10)
+
+**What changed.** `protected_paths` += `.github/**`, `bootstrap.py`,
+`bootstrap.sh`, `.gitattributes` (`.github/workflows/**` stays in
+`trusted_test_paths`; overlap is accepted by `validate_policy`). CODEOWNERS
+mirrors the three new files (`.github/` was already covered). `scope_allowed`
+enumerates `src/scoring.py`, `src/__init__.py`, `tests/worker/**`. New
+`pipeline/tests/test_coverage.py`: governed / scope-only / uncovered reported
+as separate categories; fails on an undeclared uncovered file, an undeclared
+scope-only file, or a stale allowlist entry. Seeded `UNCOVERED`: `.gitignore`,
+`README.md`, `RUNBOOK.md`, `pipeline/probe_agy.sh`. 44 unit tests pass, replay
+15/15; confirmed the test fails on a new `src/extra.py`.
+
+**Why scope is not `src/**`.** A first attempt widened scope to `src/**`; the
+replay dropped to 14/15 — `out_of_scope` (edits `src/auth/session.py`) became
+mergeable. Scope comes from the approved plan; TASK-0042 does not touch
+`src/auth/`. The replay table was not changed. Scope-only files are
+uncovered once the task closes; the test now says so.
+
+**Actual verdict, quoted (run 37203027096, first push):**
+- `deterministic-checks`: FAIL — "blocked by base_binding, protected_paths, scope, test_integrity".
+  - BLOCKING protected_paths [.ai/DECISIONS.md, .ai/POLICY.yaml, pipeline/harness/fixture.py]
+  - BLOCKING test_integrity [pipeline/tests/test_coverage.py]
+  - BLOCKING scope [.ai/DECISIONS.md, .ai/POLICY.yaml, .github/CODEOWNERS,
+    pipeline/harness/fixture.py, pipeline/tests/test_coverage.py]
+  - BLOCKING base_binding: main advanced since approval and touched 13 files
+    including .ai/POLICY.yaml, .github/workflows/ci.yml,
+    pipeline/orchestrator/{ci_check,gate,mutate,repo}.py
+- `trusted-suites`: FAIL — 4 failed (acceptance vs unimplemented `clamp_score`, by design).
+- `adversarial-replay`, `pipeline-unit-tests`: pass.
+
+The run merged on is the one after this entry's push; its verdict is posted as
+a comment on PR #10 (an entry cannot quote the run its own commit triggers).
