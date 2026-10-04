@@ -14,13 +14,38 @@ Owner handle: `mohitnanda786`
 2. **Do not use `--dangerously-skip-permissions`** or any equivalent.
 3. **Steps marked `NEEDS THE HUMAN` cannot be done by an agent.** Stop, say
    precisely what you need, and wait.
-4. **Verify by trying to break it, not by reading the settings page.** Several
+4. **A blocked command is a result, not an obstacle.** If a permission
+   prompt, classifier or check denies something, stop and report it. Do not
+   try a second route to the same effect.
+5. **Verify by trying to break it, not by reading the settings page.** Several
    failures here are silent: GitHub accepts the configuration and enforces
    nothing.
-5. **Record results in `.ai/VERIFIED.md` with today's date**, including
+6. **Record results in `.ai/VERIFIED.md` with today's date**, including
    failures. An honest negative result is the point.
-6. After step 5, `main` is protected and you cannot push to it directly.
+7. After step 5, `main` is protected and you cannot push to it directly.
    Everything after that goes through a pull request.
+
+---
+
+## Platform note
+
+Written for POSIX shells. On Windows, run everything from **PowerShell**, not
+Git Bash — Git Bash ships GNU tar, which rejects drive-letter paths like
+`C:\\` and breaks the clean checkout. Substitutions:
+
+| Runbook | Windows |
+| --- | --- |
+| `./bootstrap.sh` | `python bootstrap.py` |
+| `/tmp/check` | `$env:TEMP\\check` |
+| `python3` | `python` |
+| `chmod +x` | not needed |
+| bash heredocs (`<<'JSON'`) | write the JSON to a file, then `gh api --input file.json` |
+
+Confirm `git config --get core.autocrlf` is `false` or unset before step 2. If
+it is `true`, the working tree holds CRLF while git stores LF. `plan_binding`
+hashes bytes, so that alone voids the approval and blocks every branch for a
+line ending. `.gitattributes` pins `eol=lf`, and `bootstrap.py` hashes the
+committed blob rather than the file on disk, but check anyway.
 
 ---
 
@@ -73,7 +98,7 @@ records the commit its plan was reviewed against, so it cannot contain its own
 hash; the scaffold is committed first and the approval on top of it.
 
 ```bash
-./bootstrap.sh
+python bootstrap.py       # or ./bootstrap.sh on POSIX
 git log --oneline
 ```
 

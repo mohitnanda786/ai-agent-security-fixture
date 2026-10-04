@@ -16,7 +16,9 @@ cosmic-ray; the gate contract is the same.
 from __future__ import annotations
 
 import ast
+import os
 import shutil
+import stat
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -98,6 +100,19 @@ def generate(path: Path, source: str) -> list[Mutant]:
             Mutant(str(path), mutator.line, mutator.applied, ast.unparse(mutated))
         )
     return out
+
+
+def force_rmtree(path) -> None:
+    """Delete a tree even when it holds read-only files.
+
+    Git marks objects in .git read-only. POSIX ignores that for unlink;
+    Windows does not, so a plain rmtree raises PermissionError there.
+    """
+    def _clear(func, target, _exc):
+        os.chmod(target, stat.S_IWRITE)
+        func(target)
+
+    shutil.rmtree(path, onerror=_clear)
 
 
 @dataclass(frozen=True)

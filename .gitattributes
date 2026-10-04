@@ -1,1 +1,4 @@
+# plan_binding hashes the bytes of PLAN.md. A checkout that rewrites line
+# endings changes those bytes and voids every approval, so pin them.
 * text=auto eol=lf
+*.sh text eol=lf

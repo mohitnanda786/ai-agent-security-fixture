@@ -145,15 +145,25 @@ def git(repo: Path, *args: str) -> str:
 
 
 def write(repo: Path, rel: str, text: str) -> None:
+    """Write with LF endings on every platform.
+
+    write_text() uses the platform newline, which on Windows turns every \\n
+    into \\r\\n. The plan hash is over bytes, so that alone voids the
+    approval and plan_binding blocks every scenario for no real reason.
+    """
     path = repo / rel
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(text.encode())
+    path.write_bytes(text.encode("utf-8"))
 
 
 def build(repo: Path) -> dict:
     """Create the repository and return its approval record."""
     repo.mkdir(parents=True, exist_ok=True)
     git(repo, "init", "-q", "-b", "main")
+    # Pin both: a machine defaulting to master, or to autocrlf=true, would
+    # produce a working tree whose bytes differ from the blobs git stores —
+    # and plan_binding hashes bytes, so every scenario would fail on a line
+    # ending rather than on anything real.
     git(repo, "config", "core.autocrlf", "false")
 
     for rel, text in FILES.items():

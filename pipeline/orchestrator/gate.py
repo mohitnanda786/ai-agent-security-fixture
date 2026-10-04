@@ -11,9 +11,11 @@ inside it.
 
 from __future__ import annotations
 
+import io
 import json
 import shutil
 import subprocess
+import tarfile
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -56,7 +58,12 @@ class GateResult:
 
 
 def _export(repo: Path, commit: str, dest: Path) -> None:
-    """A clean checkout of exactly one commit. No worker working tree."""
+    """A clean checkout of exactly one commit. No worker working tree.
+
+    Extracted with Python's tarfile rather than the tar binary: GNU tar under
+    Git Bash on Windows rejects drive-letter paths such as C:\\, which made
+    the whole gate unrunnable there.
+    """
     dest.mkdir(parents=True, exist_ok=True)
     archive = subprocess.run(
         ["git", "-C", str(repo), "archive", commit],
@@ -64,7 +71,11 @@ def _export(repo: Path, commit: str, dest: Path) -> None:
         check=True,
         timeout=60,
     ).stdout
-    subprocess.run(["tar", "-x", "-C", str(dest)], input=archive, check=True, timeout=60)
+    with tarfile.open(fileobj=io.BytesIO(archive)) as tf:
+        try:
+            tf.extractall(dest, filter="data")
+        except TypeError:  # pragma: no cover - Python < 3.12
+            tf.extractall(dest)
 
 
 def _restore_trusted(repo: Path, base: str, dest: Path, trusted: list[str]) -> None:

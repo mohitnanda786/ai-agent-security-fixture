@@ -7,10 +7,12 @@ diff, a real clean checkout and a real test run — not a synthetic path list.
 from __future__ import annotations
 
 import sys
+import tempfile
 from pathlib import Path
 
 from harness import fixture, worker_stub
 from orchestrator import gate
+from orchestrator.mutate import force_rmtree
 from orchestrator.checks import validate_policy
 from orchestrator.repo import load_policy
 
@@ -41,21 +43,9 @@ EXPECTED: dict[str, str | None] = {
 
 
 def main() -> int:
-    root = Path("/tmp/fixture-repo")
+    root = Path(tempfile.gettempdir()) / "fixture-repo"
     if root.exists():
-        import os
-        import shutil
-        import stat
-
-        def _force(func, path, _exc):
-            # Windows keeps git objects read-only; clear the bit and retry.
-            os.chmod(path, stat.S_IWRITE)
-            func(path)
-
-        if sys.version_info >= (3, 12):
-            shutil.rmtree(root, onexc=_force)
-        else:
-            shutil.rmtree(root, onerror=_force)
+        force_rmtree(root)
     approval = fixture.build(root)
     policy = load_policy(root / ".ai/POLICY.yaml")
     validate_policy(policy)
