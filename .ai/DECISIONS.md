@@ -146,7 +146,10 @@ reachable the moment a task's allowed scope is widened to include it.
 Not changed here: these are reported, not fixed, as requested. Note that
 CODEOWNERS covers only 1 of the 9.
 
-**Actual verdict, quoted (run 37202423636):**
+**Actual verdict, quoted (run 37202423636, first push; the PR was merged on
+run 37202471861, second push, which had the same three blocks with
+`.ai/DECISIONS.md` added to `protected_paths` and `scope` by the entry
+itself):**
 - `deterministic-checks`: FAIL — "blocked by base_binding, protected_paths, scope".
   - BLOCKING protected_paths [.ai/POLICY.yaml]
   - BLOCKING scope [.ai/POLICY.yaml, .github/CODEOWNERS, pipeline/harness/fixture.py]

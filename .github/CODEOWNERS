@@ -9,3 +9,6 @@
 /pipeline/harness/          @mohitnanda786
 /pipeline/tests/            @mohitnanda786
 /pyproject.toml             @mohitnanda786
+/bootstrap.py              @mohitnanda786
+/bootstrap.sh              @mohitnanda786
+/.gitattributes            @mohitnanda786
