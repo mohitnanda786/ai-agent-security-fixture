@@ -117,3 +117,45 @@ head-side plan swap; `protected_paths` (`.ai/**`) and `gate.py`'s
 - `adversarial-replay`, `pipeline-unit-tests`: pass.
 
 Overridden knowingly: verdict read before merging.
+
+## 2026-10-04 — Protect pipeline code and tests; attack-surface audit (PR #9)
+
+**What changed.** `protected_paths` += `pipeline/orchestrator/**`,
+`pipeline/harness/**`; `trusted_test_paths` += `pipeline/tests/**` (in
+`.ai/POLICY.yaml` and the replay fixture's copy). `CODEOWNERS` gains
+`/pipeline/harness/` and `/pipeline/tests/` (orchestrator was already there) so
+both layers match. `validate_policy` ok, 41 unit tests pass, replay 15/15.
+
+**Audit — tracked paths outside protected_paths, trusted_test_paths and the
+allowed scope (`src/scoring.py`, `tests/worker/**`): 9 of 38.** This is the
+remaining attack surface of the policy layer. None is writable by a worker
+under the current task, because `scope` is default-deny; each becomes
+reachable the moment a task's allowed scope is widened to include it.
+
+| Path | CODEOWNERS | Why it matters |
+| --- | --- | --- |
+| `.github/CODEOWNERS` | yes | Defines the forge-side layer; policy layer sees it only via `scope` (confirmed in this PR's verdict) |
+| `.gitattributes` | no | Controls line endings, so it can change the bytes `plan_hash` is computed over |
+| `RUNBOOK.md` | no | Instructions executed by agents: a prompt-injection target |
+| `bootstrap.sh`, `bootstrap.py` | no | Run by a human with owner credentials; create the approval commit |
+| `pipeline/probe_agy.sh` | no | Shell script run by a human after signing in to `agy` |
+| `src/__init__.py` | no | Imported by every test run; a worker allowed `src/**` could execute code at import |
+| `.gitignore` | no | Can hide files from `git add -A` in bootstrap |
+| `README.md` | no | Low risk; documentation only |
+
+Not changed here: these are reported, not fixed, as requested. Note that
+CODEOWNERS covers only 1 of the 9.
+
+**Actual verdict, quoted (run 37202423636):**
+- `deterministic-checks`: FAIL — "blocked by base_binding, protected_paths, scope".
+  - BLOCKING protected_paths [.ai/POLICY.yaml]
+  - BLOCKING scope [.ai/POLICY.yaml, .github/CODEOWNERS, pipeline/harness/fixture.py]
+  - BLOCKING base_binding: main advanced since approval and touched
+    [.ai/DECISIONS.md, .ai/LESSONS_LEARNED.md, .ai/POLICY.yaml,
+    .ai/VERIFIED.md, .github/workflows/ci.yml]
+- `trusted-suites`: FAIL — 4 failed (acceptance vs unimplemented `clamp_score`, by design).
+- `adversarial-replay`, `pipeline-unit-tests`: pass.
+- Under the base policy (not the new one) `pipeline/harness/fixture.py` was
+  caught only by `scope` — the old gap this PR closes.
+
+Overridden knowingly: verdict read before merging.
