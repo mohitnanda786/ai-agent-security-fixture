@@ -272,3 +272,9 @@ is edited; no test ties the two together.
 **Next.** The clean data point is PR #13 (a DECISIONS.md-only write) rebased
 onto this once merged. This PR's own run cannot test that; its verdict is in a
 comment on PR #14.
+
+## 2026-10-04 — Follow-up write after the drift fix (PR #13)
+
+A small `DECISIONS.md`-only write on its own branch, made after #12 merged,
+to observe how `base_binding` treats a later audit-trail write. Result is
+posted as a comment on the PR.
