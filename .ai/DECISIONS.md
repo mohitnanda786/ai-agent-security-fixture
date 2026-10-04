@@ -21,3 +21,24 @@ so the plan would need re-approval). `trusted-suites` also failed, because the
 acceptance suite is meant to fail until `clamp_score` is implemented. Neither
 was relaxed or skipped. Owner merge is the intended path for this class of
 change.
+
+## 2026-10-04 — Lessons learned: audit gap and example-vs-directive (PR #5)
+
+**What changed.** Two entries added to `.ai/LESSONS_LEARNED.md`. Merged by the
+owner via the `pull_request` bypass, following the new convention (watch the
+checks complete, then `--admin`).
+
+**Actual verdict, quoted (run 37201589789, first push of this branch):**
+- `deterministic-checks`: FAIL — "blocked by base_binding, scope".
+  - BLOCKING scope: paths outside the approved scope changed [.ai/LESSONS_LEARNED.md]
+  - BLOCKING base_binding: main advanced since approval and touched files this
+    task depends on; the plan needs re-approval [.github/workflows/ci.yml]
+  - `protected_paths` did **not** fire: `.ai/LESSONS_LEARNED.md` is not on the
+    protected list, unlike `.ai/POLICY.yaml`. Possible gap in `POLICY.yaml`
+    coverage of `.ai/`; not changed here.
+- `trusted-suites`: FAIL — 4 failed (acceptance suite vs. unimplemented
+  `clamp_score`, by design).
+- `adversarial-replay`, `pipeline-unit-tests`: pass.
+
+Overridden knowingly, not skipped: the verdicts above exist and were read
+before merging.
