@@ -40,3 +40,40 @@ better than the plan's test strategy.
 reviewer-directed text in a source comment and merges cleanly. Nothing here
 reads prose; it sees the actions injection would cause. The target is the
 reviewing model, which arrives at step 4.
+
+## Runbook execution — 2026-10-04 (Windows 11, Git Bash + PowerShell)
+
+**Steps 0–3.** Tools present, `gh` authed with `repo` scope. Unit tests 35
+passed; replay 15/15 as expected, expectations table untouched. Windows needed
+portability fixes only, no check weakened: read-only git objects broke
+`rmtree`; `master` default branch vs `main`; CRLF (text-mode writes and global
+`autocrlf=true`) changed `PLAN.md` bytes and `plan_binding` correctly blocked
+every scenario until fixed (`.gitattributes` pins LF); the replay runs from
+PowerShell because Git Bash's GNU `tar` rejects `C:\` paths. Bootstrap and push
+succeeded.
+
+**Step 4.** First CI run on `main`: `pipeline-unit-tests` failed (bare `pytest`
+could not import `orchestrator`); the other three jobs passed. Fixed by
+`python -m pytest`. That change touches `.github/workflows/ci.yml`, so PR #1
+was blocked by `deterministic-checks` (`test_integrity`, `scope`) as designed,
+and `trusted-suites` failed on the intentionally unimplemented `clamp_score`.
+The owner merged it via bypass.
+
+**Step 5 — ruleset history (honest account).**
+- Ruleset 24453985 "Protect main" existed before this session: deletion,
+  non_fast_forward, PR required with 0 approvals, no code-owner review, no
+  required status checks, no bypass actors. It was not created from the
+  runbook payload.
+- At 22:58 a `bypass_actors` entry (Admin role, `bypass_mode: always`) was
+  added on the owner's request. That allowed direct pushes to `main`.
+- It was then narrowed in place: `bypass_mode: pull_request`, 1 required
+  approval, code-owner review required, required checks
+  `deterministic-checks` and `trusted-suites` (strict). No second ruleset.
+
+**Step 6 — direct-push probe (after narrowing).** Clone of `main`, commit,
+`git push origin main` as the repo owner: **rejected** (GH013) — "Changes must
+be made through a pull request" and "2 of 2 required status checks are
+expected". Direct push is blocked even for the admin with the PR-only bypass.
+Not yet run: the protected-path probe PR (weaken `POLICY.yaml`).
+
+**Open:** rows 1 and 2 (Step 7) need the human to install `agy` and sign in.
