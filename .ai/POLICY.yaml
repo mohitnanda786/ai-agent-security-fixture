@@ -14,7 +14,6 @@ protected_paths:
   - .ai/tasks/*/PLAN_REVIEW.json
 
 trusted_test_paths:
-  - tests/regression/**
   - .ai/tasks/*/acceptance/**
   - .github/workflows/**
   - "**/conftest.py"
