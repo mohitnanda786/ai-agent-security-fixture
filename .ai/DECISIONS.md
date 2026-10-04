@@ -278,3 +278,15 @@ comment on PR #14.
 A small `DECISIONS.md`-only write on its own branch, made after #12 merged,
 to observe how `base_binding` treats a later audit-trail write. Result is
 posted as a comment on the PR.
+
+## 2026-10-04 — Known gap: DRIFT_PATHS hardcodes the regression path
+
+`DRIFT_PATHS` (PR #14) hardcodes `tests/regression/**`, while the policy
+configures regression paths in `trusted_test_paths`. A rename in policy would
+not follow, and nothing would notice. Not fixed here.
+
+**Intended fix:** a test asserting that every `DRIFT_PATHS` entry is either
+covered by the policy's `trusted_test_paths` or is `.ai/POLICY.yaml`. That
+catches a rename without re-coupling the lists: drift has been wrong twice by
+borrowing another list, so it stays a stated constant and the test checks the
+two agree. Not yet written; this entry is the record.

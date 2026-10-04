@@ -41,3 +41,35 @@ CODEOWNERS covered the whole directory and did not have the gap. Fixed by
 `.ai/**` and a regression test that loads the real policy and asserts a new
 file under `.ai/` is caught by `protected_paths` independent of scope. Found
 because a verdict was read rather than assumed.
+
+## 2026-10-04 — A file edit silently did not apply, and the report said it had
+
+Data points, each caught by checking the artifact rather than trusting the
+report:
+
+1. **Owner-side.** The `ci_check` fix was believed to be on `main` and in the
+   shipped zip. It was in neither: `parse_policy` and `show` appear in no
+   archive, no loose file and no commit. Found by diffing `pipeline/
+   orchestrator/` against both zips, not by reading the claim.
+2. **Agent-side.** A scripted `str.replace` on `tests/test_ci_check.py` matched
+   nothing and applied nothing; the script printed no error. The suite still
+   passed (the new cases were simply absent). Caught because the diff stat
+   listed two files, not three.
+3. **Agent-side.** A `sed` substitution containing `\n` wrote a real newline
+   into a Python string literal, which surfaced as a `SyntaxError`. This one
+   failed loudly; it is listed because the cause is the same: the edit did not
+   mean what the command said.
+
+The owner reports a further instance of (1)'s kind; it is not recorded in this
+session's history and is not filled in here. Rule: after any edit, check the
+file (`git diff --stat`, a grep for the new text), not the tool's exit status
+or the agent's summary.
+
+## 2026-10-04 — Positive: an approval was left for the owner to merge
+
+The agent regenerated `APPROVAL.json` for TASK-0042 (PR #11) and did not merge
+it, on the grounds that an approval is the owner's sign-off and `regenerate`
+was not `merge`. An agent regenerating and merging its own approval record is
+the pipeline's central failure mode. The control that held here was the
+agent's own judgement, not a technical one: the owner bypass would have let it
+through. Worth hardening, since it should not depend on judgement.
