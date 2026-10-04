@@ -77,3 +77,16 @@ expected". Direct push is blocked even for the admin with the PR-only bypass.
 Not yet run: the protected-path probe PR (weaken `POLICY.yaml`).
 
 **Open:** rows 1 and 2 (Step 7) need the human to install `agy` and sign in.
+
+## Open items — not yet verified
+
+- **Worker-credential enforcement is untested.** Every command so far ran under
+  the owner token. "A worker cannot bypass this" has not been demonstrated; it
+  needs a fine-grained PAT or machine user with write but not admin. That is
+  the step 4 worker credential.
+- **Code-owner review was not demonstrated.** GitHub does not request review
+  from a PR's own author, and every CODEOWNERS entry is the owner. Needs a
+  second account to open the PR.
+- **`base_binding` re-approval path has never been exercised.** It fired as a
+  block on PRs #2 and #3 (main advanced and touched `ci.yml`), but no
+  re-approval was performed to confirm the path clears.
