@@ -64,17 +64,38 @@ report:
    success and did not apply. Caught by grepping for the new symbol: 5 hits in
    `checks.py`, 0 in `ci_check.py`.
 
-Four data points recorded, **three distinct instances**. The owner has
+5. **Agent-side, new mechanism: applied, but with altered content.**
+   Backslashes in a script passed through the tool layer were halved in
+   transit. A Windows path written into `VERIFIED.md` as `.gemini` + backslash +
+   `antigravity-cli` arrived as an escape sequence, so a BEL character (0x07)
+   replaced the backslash-a, and a backslash-t became a TAB inside
+   `logs...transcript`. The edit applied; it applied with different content than
+   the command said. A `git diff --stat` showed the expected files and line
+   counts and would not have shown it; scanning the file's bytes for control
+   characters did. The first repair attempt went through the same channel and
+   reintroduced the BEL, so the failure repeated once before it was fixed by
+   building the bytes without typing a backslash.
+
+Five data points recorded, **four distinct instances**. The owner has
 confirmed that (1) and (4) are one event: a single failed container
 `str_replace` on `ci_check.py`, which produced two symptoms. The first is the
 broken file shipped in the original archive (the second archive contains no
 `ci_check.py` at all); the second is a later false claim that
 the fix was on `main`. Attribution as recorded: two data points the owner's,
-two the agent's; the owner's two are the same event, so the distinct instances
-are one owner-side and two agent-side.
+three the agent's; the owner's two are the same event, so the distinct
+instances are one owner-side and three agent-side.
 
-Rule: after any edit, check the file (`git diff --stat`, a grep for the new
-text), not the tool's exit status or the agent's summary.
+The mechanisms differ, and so do the detectors: (2) applied nothing (a diff
+stat showed it); (3) failed loudly; (5) applied altered content (only a byte
+scan showed it); (1)/(4) applied nothing and was then asserted from memory.
+(3) and (5) are one family, a backslash interpreted by a layer between the
+command and the file; (3) happened to produce a syntax error, (5) did not.
+
+Rule: after any edit, check the artifact, not the tool's exit status or the
+agent's summary. A grep for the new text and `git diff --stat` catch an edit
+that did not apply; they do not catch one that applied wrongly. Also read the
+result back, or scan it for control characters, whenever the edit carried
+backslashes.
 
 ## 2026-10-04 — The second symptom is its own lesson: a control cited from memory
 
