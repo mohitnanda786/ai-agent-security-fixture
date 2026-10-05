@@ -55,6 +55,7 @@ APPROVAL = {
     "base_commit": BASE,
     "approval": "APPROVED",
     "plan_reviewer_model": "example/reviewer-1",
+    "worker_model": "example/worker-1",
 }
 
 
@@ -183,6 +184,22 @@ def test_incomplete_approval_blocks_merge():
     bad = dict(APPROVAL, plan_reviewer_model="")
     v = verify(["src/pushups/score.py"], approval=bad)
     assert "provenance" in v.checks_fired()
+
+
+@pytest.mark.parametrize("value", ["", "   ", None])
+def test_approval_without_a_worker_model_blocks_merge(value):
+    """The chain records who reviewed the plan; it must also say what built it."""
+    bad = dict(APPROVAL)
+    if value is None:
+        del bad["worker_model"]
+    else:
+        bad["worker_model"] = value
+    v = verify(["src/pushups/score.py"], approval=bad)
+    assert "provenance" in v.checks_fired()
+
+
+def test_worker_model_is_a_required_approval_field():
+    assert "worker_model" in Policy().required_approval_fields
 
 
 # ------------------------------------------------- the gap, asserted -------

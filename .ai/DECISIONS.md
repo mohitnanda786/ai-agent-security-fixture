@@ -290,3 +290,27 @@ covered by the policy's `trusted_test_paths` or is `.ai/POLICY.yaml`. That
 catches a rename without re-coupling the lists: drift has been wrong twice by
 borrowing another list, so it stays a stated constant and the test checks the
 two agree. Not yet written; this entry is the record.
+
+## 2026-10-05 — worker_model in the approval record (PR #20)
+
+**What changed.** `worker_model` is now in `Policy.required_approval_fields`,
+so `check_provenance` blocks an approval that does not name it (empty,
+whitespace and absent all block). The chain recorded `plan_reviewer_model` but
+nothing identified what produced the implementation. `bootstrap.py` and
+`bootstrap.sh` require `WORKER_MODEL` explicitly and refuse to run without it:
+a defaulted or placeholder value would satisfy the non-empty check while
+recording nothing. The fixture and tests carry the field. 64 unit tests pass,
+replay 15/15; the new tests fail against the old `checks.py`.
+
+**Consequence, deliberate and not yet resolved: the standing approval is now
+incomplete.** `.ai/tasks/TASK-0042/APPROVAL.json` on `main` has no
+`worker_model`, so once this merges every PR gets a blocking `provenance`
+finding until the approval is re-issued with a value. I did not choose one:
+which model is assigned to TASK-0042 is the owner's decision, and it is a
+sign-off, so the re-approval is left for the owner (as with PR #11).
+`ci_check` reads the approval from the base ref, so this PR's own run is
+judged against the old approval and already shows the finding.
+
+**Limit.** The field is a claim, not evidence. `agy --output-format json` does
+not name the model that answered (VERIFIED.md, agy section), so nothing yet
+lets the pipeline check that the recorded `worker_model` is what ran.

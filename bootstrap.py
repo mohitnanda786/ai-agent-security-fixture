@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -38,6 +39,12 @@ def git_bytes(*args: str) -> bytes:
 
 
 def main() -> int:
+    worker_model = os.environ.get("WORKER_MODEL", "").strip()
+    if not worker_model:
+        raise SystemExit(
+            "WORKER_MODEL is required (e.g. WORKER_MODEL=gemini-3.8-flash-high): "
+            "the approval records what will produce the implementation"
+        )
     if not Path(".ai/tasks", TASK, "PLAN.md").exists():
         raise SystemExit("run this from the repository root")
 
@@ -62,6 +69,7 @@ def main() -> int:
         "base_commit": base,
         "approval": "APPROVED",
         "plan_reviewer_model": "manual/human",
+        "worker_model": worker_model,
         "approved_at": "2026-10-04",
     }
     approval_path.write_bytes(
