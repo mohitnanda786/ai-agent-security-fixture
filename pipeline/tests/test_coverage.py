@@ -29,6 +29,7 @@ UNCOVERED = {
     "README.md": "documentation only",
     "RUNBOOK.md": "operator instructions; agents read it, so review changes by hand",
     "pipeline/probe_agy.sh": "operator probe script, run by a human after sign-in",
+    "pipeline/probe_agy.ps1": "Windows port of the operator probe; runs agy, run by a human",
 }
 
 # Covered only by the allowed scope of the current task (TASK-0042). These are

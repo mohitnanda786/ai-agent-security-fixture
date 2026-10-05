@@ -5,14 +5,14 @@ was checked here, with a date. Secondary sources are marked as such.
 
 | Row | Checked | Result |
 | --- | --- | --- |
-| 1 | 2026-10-04, secondary | `-p` / `--print` / `--prompt` and `--output-format text\|json\|stream-json` are real. `--non-interactive` is not a flag. No `--headless`. Open issues report `-p` dropping stdout or hanging when stdout is not a TTY (1.0.6, reproduced 1.0.14). **Confirm locally with `pipeline/probe_agy.sh`.** |
-| 2 | 2026-10-04, secondary | CLI auth is OAuth via the system keyring; API-key auth is directed to the SDK. Headless runs use cached credentials, so one interactive sign-in is needed per machine. **Confirm locally.** |
+| 1 | 2026-10-05, local, agy 1.2.17 | **Closed locally.** `-p` / `--print` / `--prompt` and `--output-format text\|json\|stream-json` are real (`agy --help`). `--non-interactive` does not exist; the owner reports it came from third-party adapter docs. Unattended `-p` works on this machine with stdin closed, stdout piped or redirected, text or json: 4/4 shapes passed, ~8-9s wall (about 2.5s of it the model turn). The community hang / silent-drop defects did **not** reproduce here. PTY shape not tested (none on Windows). `--print-timeout` bounds the model turn only and reports a timeout as success (see below). Full log below. |
+| 2 | 2026-10-05, local, agy 1.2.17 | **Closed locally; the answer is bad for a credential-free worker.** There is no profile flag. With USERPROFILE, HOME, APPDATA, LOCALAPPDATA and XDG_* pointed at an empty directory, `agy -p` still **succeeded** in 8.6s (`ALIVE`) and created 78 files there. Credentials are therefore reachable from outside the profile directory. Where from is **not established** (Windows Credential Manager is the likely holder but was not tested). A worker container cannot be assumed credential-free with this CLI. |
 | 3 | open | Antigravity data-handling terms. |
 | 4 | open | Prompt caching discount and TTL per provider. |
 | 5 | open | Batch endpoint pricing and turnaround. |
 | 6 | open | Free-tier training and retention terms. |
 | 7 | open | Rate-limit retry hints. |
-| 8 | open | Token usage exposure per provider. |
+| 8 | open | Token usage exposure per provider. | *agy, one call:* `--output-format json` returns `usage` {input, output, thinking, cache_read, total tokens}, `duration_seconds`, `num_turns`, `conversation_id`; it does **not** name the model that answered.
 | 9 | 2026-10-04, confirmed | GitHub Free exposes branch protection and rulesets on **public** repos only; a private repo returns `403 Upgrade to GitHub Pro`, and CODEOWNERS parses but requests nothing. Both fail silently. This repo is therefore public. |
 | 10 | 2026-10-04, resolved | Mutation engine written in-tree (`pipeline/orchestrator/mutate.py`), so no external tool dependency. See the finding below. |
 
@@ -136,3 +136,63 @@ stated as such and not "fixed".
 
 **Still untested:** a worker credential without admin, and a second account
 for code-owner review.
+
+
+## agy 1.2.17 — flags and probe, 2026-10-05
+
+Source: the binary's own `agy --help`, `agy models` and `agy --version` (1.2.17),
+run locally. The saved `agy-help.txt` handed over was **0 bytes**, so it was
+not used; nothing here comes from it. Auth: OAuth, Google AI Pro, as reported.
+
+| Claim | Status |
+| --- | --- |
+| `-p` / `--print` / `--prompt`, `--output-format text\|json\|stream-json` | **Confirmed** in help; exercised by the probe |
+| `--non-interactive` | **Does not exist** (absent from help) |
+| `--print-timeout` bounds the hang defect without a PTY wrapper | **Partly.** Bounds the model turn only (startup, ~6s, is unbounded). On expiry it prints `[agy] print timeout after 1s with turn in progress; returning partial output` to stderr and exits **0** with `status: "SUCCESS"`, empty `response`, zero usage. A timeout looks like success; an adapter must check for empty output and keep an outer kill timer |
+| `--sandbox` "terminal restrictions" | Flag exists. What it restricts, and whether it forms part of a worker sandbox, is **not tested** |
+| `--mode plan\|accept-edits` as tool-enforced role separation | Flag exists (help: "agent execution mode"). Enforcement **not tested** |
+| `--json-schema` enforces review schemas at the API | Flag exists (help: "enforce structured output"). Enforcement point **not tested** |
+| `--add-dir` as workspace scoping, a layer under scope globs | Help says it **adds** a directory to the workspace (repeatable). That widens access; it is not shown to restrict anything |
+| `--effort low\|medium\|high\|xhigh\|max` as a cost dial | Flag exists; effect on cost **not measured**. `agy models` also lists `-high/-medium/-low` model variants |
+| Model Gemini 3.8 Flash | Listed by `agy models` (High/Medium/Low). The JSON output does not say which model answered, so this is not confirmed for the probe calls |
+| `--dangerously-skip-permissions` | Exists. The probe does not use it (runbook rule 2) |
+
+Probe: `pipeline/probe_agy.ps1`, run from an empty directory.
+
+```
+-- Environment ----------------------------------------
+agy:      1.2.17
+path:     C:\Users\MOHIT\AppData\Local\agy\bin\agy.exe
+stdout redirected: True
+timeout(1): n/a on Windows (hard kill timer + --print-timeout)
+script(1):  n/a on Windows (PTY shape skipped)
+
+-- Row 1 - does -p produce output without a TTY? ----------------------------------------
+PASS  pipe (stdout/stderr captured, stdin closed) - 5 chars in 9s
+PASS  redirect to file - 5 chars in 8.1s
+PASS  pipe + --output-format json - 255 chars in 8.5s
+      json: parses
+SKIP  PTY - not available on Windows without a ConPTY wrapper; not tested
+PASS  pipe + --print-timeout 90s - 5 chars in 8.2s
+WARN  --print-timeout 1s enforced on the TURN but reported as SUCCESS: exit 0 after 7s,
+      stderr notice 'print timeout ... returning partial output', empty response.
+      An adapter must treat empty output / that notice as failure, and still needs
+      an outer kill timer: the bound does not cover startup (7s total).
+
+-- Row 2 - does it authenticate without the signed-in profile? ----------------------------------------
+No profile flag exists. Overriding USERPROFILE, HOME, APPDATA, LOCALAPPDATA and
+XDG_* for the child to an empty directory. Windows Credential Manager is per-user
+and is NOT moved by these, so SUCCEEDS means credentials are reachable from
+outside the profile directory.
+SUCCEEDS in 8.6s - credentials are reachable from outside the profile dir.
+           Find out where before claiming the worker container is credential-free.
+      ALIVE
+files agy created in the empty profile: 78
+
+-- Result ----------------------------------------
+row 1: 4 passed, 0 failed
+
+The adapter can use plain subprocess with stdin closed. Build it that way.
+
+Paste this log into .ai/VERIFIED.md with today's date.
+```
