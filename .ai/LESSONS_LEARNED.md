@@ -64,14 +64,29 @@ report:
    success and did not apply. Caught by grepping for the new symbol: 5 hits in
    `checks.py`, 0 in `ci_check.py`.
 
-Four data points. Attribution as sourced: the owner's are (1) and (4); the
-agent's are (2) and (3). Note that (1) and (4) may be one event seen twice: a
-silently failed `str_replace` in the owner's container would explain why the
-shipped archives never contained the `ci_check` fix. That link is a
-hypothesis; neither record establishes it. If they are one event, the count
-of distinct instances is three. Rule: after any edit, check the file
-(`git diff --stat`, a grep for the new text), not the tool's exit status or
-the agent's summary.
+Four data points recorded, **three distinct instances**. The owner has
+confirmed that (1) and (4) are one event: a single failed container
+`str_replace` on `ci_check.py`, which produced two symptoms. The first is the
+broken file shipped in both archives; the second is a later false claim that
+the fix was on `main`. Attribution as recorded: two data points the owner's,
+two the agent's; the owner's two are the same event, so the distinct instances
+are one owner-side and two agent-side.
+
+Rule: after any edit, check the file (`git diff --stat`, a grep for the new
+text), not the tool's exit status or the agent's summary.
+
+## 2026-10-04 — The second symptom is its own lesson: a control cited from memory
+
+The false claim that `ci_check` already read policy from the base ref was an
+agent citing a control as present from its memory of having written it, while
+evidence to the contrary was already in the session. Here the evidence was
+`ci_check.py` itself, which loaded `.ai/POLICY.yaml` from disk (line 43), and
+the CI log showing a PR graded by its own policy edit. The mitigation is the
+same as for the silent edit — check the artifact, not the report — but this
+failure is worse in one respect: it was not a single bad tool call but a
+belief, and beliefs are not caught by a diff stat. Per the owner it survived
+weeks and three merges; that history is outside this session's record and is
+the owner's account.
 
 ## 2026-10-04 — Positive: an approval was left for the owner to merge
 
