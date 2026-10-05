@@ -67,7 +67,8 @@ report:
 Four data points recorded, **three distinct instances**. The owner has
 confirmed that (1) and (4) are one event: a single failed container
 `str_replace` on `ci_check.py`, which produced two symptoms. The first is the
-broken file shipped in both archives; the second is a later false claim that
+broken file shipped in the original archive (the second archive contains no
+`ci_check.py` at all); the second is a later false claim that
 the fix was on `main`. Attribution as recorded: two data points the owner's,
 two the agent's; the owner's two are the same event, so the distinct instances
 are one owner-side and two agent-side.
@@ -84,9 +85,16 @@ evidence to the contrary was already in the session. Here the evidence was
 the CI log showing a PR graded by its own policy edit. The mitigation is the
 same as for the silent edit — check the artifact, not the report — but this
 failure is worse in one respect: it was not a single bad tool call but a
-belief, and beliefs are not caught by a diff stat. Per the owner it survived
-weeks and three merges; that history is outside this session's record and is
-the owner's account.
+belief, and beliefs are not caught by a diff stat. The record supports this much: the broken
+`ci_check.py` shipped in the original archive and remained on `main` until
+PR #8 corrected it.
+
+This correction is itself an instance of the entry's subject: an unsourced
+quantity ("weeks and three merges") asserted in a file about unsourced
+assertions, caught by the agent asking where it came from. The same pass found
+a second one the agent had written without checking: "shipped in both
+archives", repeated from the owner's wording into this file; the second archive
+has no `ci_check.py`.
 
 ## 2026-10-04 — Positive: an approval was left for the owner to merge
 
