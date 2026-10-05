@@ -6,7 +6,7 @@ was checked here, with a date. Secondary sources are marked as such.
 | Row | Checked | Result |
 | --- | --- | --- |
 | 1 | 2026-10-05, local, agy 1.2.17 | **Closed locally.** `-p` / `--print` / `--prompt` and `--output-format text\|json\|stream-json` are real (`agy --help`). `--non-interactive` does not exist; the owner reports it came from third-party adapter docs. Unattended `-p` works on this machine with stdin closed, stdout piped or redirected, text or json: 4/4 shapes passed, ~8-9s wall (about 2.5s of it the model turn). The community hang / silent-drop defects did **not** reproduce here. PTY shape not tested (none on Windows). `--print-timeout` bounds the model turn only and reports a timeout as success (see below). Full log below. |
-| 2 | 2026-10-05, local, agy 1.2.17 | **Closed locally; the answer is bad for a credential-free worker.** There is no profile flag. With USERPROFILE, HOME, APPDATA, LOCALAPPDATA and XDG_* pointed at an empty directory, `agy -p` still **succeeded** in 8.6s (`ALIVE`) and created 44 files in 34 directories there (an earlier draft of this row said 78 files; that count included directories). Credentials are therefore reachable from outside the profile directory. Where from is **not proven**: Windows Credential Manager holds a generic credential `gemini:antigravity` (see the profile inspection below), the probable source, but removing it to test was not done. A worker container cannot be assumed credential-free with this CLI. |
+| 2 | 2026-10-05, local, agy 1.2.17 | **Closed negative.** There is no profile flag. With USERPROFILE, HOME, APPDATA, LOCALAPPDATA and XDG_* pointed at an empty directory, `agy -p` still **succeeded** in 8.6s (`ALIVE`) and created 44 files in 34 directories there (an earlier draft of this row said 78 files; that count included directories). Credentials are therefore reachable from outside the profile directory. Where from is **not proven**: Windows Credential Manager holds a generic credential `gemini:antigravity` (see the profile inspection below), the probable source, but removing it to test was not done. **agy cannot be assumed to run in a credential-free container**; evidence and limits are under "agy in a credential-free container" below. |
 | 3 | open | Antigravity data-handling terms. |
 | 4 | open | Prompt caching discount and TTL per provider. |
 | 5 | open | Batch endpoint pricing and turnaround. |
@@ -229,3 +229,55 @@ reports `usage` but not the responding model, so nothing binds the recorded
 value to what ran, and `gemini-3.8-flash` is not an exact `agy models` id.
 Anything that verifies the worker's identity has to come from outside the
 worker: the worker cannot be the source of its own provenance.
+
+## agy in a credential-free container — row 2 closed negative, 2026-10-05
+
+**Observed on this machine.**
+1. With the profile directory redirected to an empty directory, `agy -p`
+   still authenticated and answered (`ALIVE`). Nothing credential-like was in
+   the profile it created.
+2. The only matching credential found is a Windows Credential Manager generic
+   credential, `gemini:antigravity`. It is per-user state, not a directory:
+   there is no path to mount, copy or withhold.
+3. On first run into an empty profile, agy wrote a 13.6 MB executable
+   (`bin/webm_encoder.exe`) plus persisted transcripts (the prompt and
+   response). The profile directory is where executable code and conversation
+   data appear at runtime.
+
+**Conclusion.** agy cannot be assumed to run in a credential-free container: its
+auth does not live in the profile, so emptying or withholding the profile
+removes nothing, and the credential has to exist somewhere outside any mountable
+path for it to work at all.
+
+**Limits.** No actual container was run. That Credential Manager is the source
+is probable, not proven (removing the credential to test it was not done). What
+agy uses for credential storage on Linux or macOS was not tested; this finding
+is about this CLI's behaviour on Windows. The secondary source in row 2's
+original entry said API-key auth is directed to the SDK; not checked here.
+
+## Recommendation (not a decision) — step 4 worker via Claude Code headless
+
+**Recommendation:** evaluate `claude -p` as the step 4 worker instead of agy.
+
+**Grounds.** (a) The credential finding above. (b) The unverifiable model id:
+agy's JSON output does not name the responding model, so the recorded
+`worker_model` cannot be bound to what ran. (c) The executable and transcripts
+written into the profile on first run.
+
+**Checked (`claude --version` 2.1.289, `claude --help`).** `-p` / `--print`,
+`--output-format`, `--json-schema`, `--model`, `--allowedTools`,
+`--permission-mode`, `--bare`, `--no-session-persistence` and `--add-dir` exist.
+`--add-dir` is described as additional directories to allow tool access to, so
+it widens access, as agy's does. `--dangerously-skip-permissions` exists
+(runbook rule 2 forbids it).
+
+**Not checked. Each needs a probe like `probe_agy.ps1` before any decision.**
+Whether its JSON output names the responding model (the property agy lacks);
+how it authenticates in a container and whether a credential can be injected
+without a profile, for example through the environment; what it writes to disk
+on first run; its timeout behaviour and exit codes on expiry; whether its
+permission modes enforce role separation.
+
+**Disclosure.** This is a Claude model recommending a Claude product. Weigh it
+accordingly, and read the "not checked" list as the test plan, not as
+conclusions. The decision is the owner's.
