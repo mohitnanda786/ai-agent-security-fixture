@@ -290,3 +290,30 @@ covered by the policy's `trusted_test_paths` or is `.ai/POLICY.yaml`. That
 catches a rename without re-coupling the lists: drift has been wrong twice by
 borrowing another list, so it stays a stated constant and the test checks the
 two agree. Not yet written; this entry is the record.
+
+## 2026-10-05 — worker_model in the approval record (PR #20)
+
+**What changed.** `worker_model` is now in `Policy.required_approval_fields`,
+so `check_provenance` blocks an approval that does not name it (empty,
+whitespace and absent all block). The chain recorded `plan_reviewer_model` but
+nothing identified what produced the implementation. `bootstrap.py` and
+`bootstrap.sh` require `WORKER_MODEL` explicitly and refuse to run without it:
+a defaulted or placeholder value would satisfy the non-empty check while
+recording nothing. The fixture and tests carry the field. 64 unit tests pass,
+replay 15/15; the new tests fail against the old `checks.py`.
+
+**Consequence: the standing approval was incomplete, so this PR also
+re-approves.** `main`'s `APPROVAL.json` had no `worker_model`, so every PR got a
+blocking `provenance` finding. The owner chose `worker_model:
+"gemini-3.8-flash"` for TASK-0042 (from the agy CLI banner), and the PR
+regenerates `APPROVAL.json` with it, a new `base_commit` and the unchanged plan
+hash. The agent did not merge it: it is the owner's sign-off, as with PR #11.
+`ci_check` reads the approval from the base ref, so this PR's own run is judged
+against the old approval and shows the `provenance` finding; that is expected
+for a re-approval. Note `gemini-3.8-flash` is not an exact id in `agy models`
+(only `-high`, `-medium`, `-low` variants), and the banner was not checked by
+the agent.
+
+**Limit.** The field is a claim, not evidence. `agy --output-format json` does
+not name the model that answered (VERIFIED.md, agy section), so nothing yet
+lets the pipeline check that the recorded `worker_model` is what ran.

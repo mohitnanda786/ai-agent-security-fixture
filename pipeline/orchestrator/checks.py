@@ -77,6 +77,7 @@ class Policy:
         "base_commit",
         "approval",
         "plan_reviewer_model",
+        "worker_model",  # what produces the implementation, not just who reviewed the plan
     )
 
 

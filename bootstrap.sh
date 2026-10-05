@@ -10,6 +10,8 @@ set -euo pipefail
 TASK=TASK-0042
 
 command -v python3 >/dev/null || { echo "python3 required"; exit 1; }
+: "${WORKER_MODEL:?WORKER_MODEL is required, e.g. WORKER_MODEL=gemini-3.8-flash-high (the approval records what will produce the implementation)}"
+export WORKER_MODEL
 [ -d .git ] || git init -q
 git branch -M main 2>/dev/null || true
 
@@ -19,7 +21,7 @@ git commit -qm "scaffold: pipeline, fixture layout, policy" || true
 BASE=$(git rev-parse HEAD)
 
 python3 - "$TASK" "$BASE" <<'PY'
-import hashlib, json, sys
+import hashlib, json, os, sys
 from pathlib import Path
 task, base = sys.argv[1], sys.argv[2]
 plan = Path(f".ai/tasks/{task}/PLAN.md").read_bytes()
@@ -29,6 +31,7 @@ approval = {
     "base_commit": base,
     "approval": "APPROVED",
     "plan_reviewer_model": "manual/human",
+    "worker_model": os.environ["WORKER_MODEL"],
     "approved_at": "2026-10-04",
 }
 Path(f".ai/tasks/{task}/APPROVAL.json").write_text(json.dumps(approval, indent=2) + "\n")

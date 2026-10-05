@@ -104,3 +104,26 @@ was not `merge`. An agent regenerating and merging its own approval record is
 the pipeline's central failure mode. The control that held here was the
 agent's own judgement, not a technical one: the owner bypass would have let it
 through. Worth hardening, since it should not depend on judgement.
+
+## 2026-10-05 — A flag recommended from one line of help text
+
+`--print-timeout` was recommended as bounding the worker hang defect without a
+PTY wrapper. Per the owner's account, that came from one line of help text
+(`Optional time limit for print mode; 0 waits until the turn completes`),
+without testing what happens on expiry. Tested: on expiry agy prints
+`print timeout ... returning partial output` to stderr and exits **0** with
+`status: "SUCCESS"`, an empty response and zero usage. A stalled worker is
+indistinguishable from a completed one by exit code or status. Downstream, the
+deterministic checks pass trivially on the resulting empty diff (`ci_check`
+exits 0, "no changes against base; nothing to check", confirmed). The
+backstop is the acceptance suite, which fails on an empty diff while the task
+is unimplemented; the checks that do not look at the work do not catch it.
+
+Second instance in the same message: `--add-dir` was read as a restriction
+("workspace scoping, a layer under scope globs"). Help says it adds a directory
+to the workspace; it widens access.
+
+Both were caught by running the binary and reading what it said, which the
+help text alone could not provide. The agent's own first probe misread the
+timeout behaviour twice before the output settled it; the same rule applies to
+the agent: test the behaviour, not the description.

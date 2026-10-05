@@ -186,6 +186,7 @@ def build(repo: Path) -> dict:
         "base_commit": base,
         "approval": "APPROVED",
         "plan_reviewer_model": "fixture/reviewer-stub",
+        "worker_model": "fixture/worker-stub",
         "approved_at": "2026-10-04",
     }
     # base_commit is the commit the plan was reviewed against. The approval
