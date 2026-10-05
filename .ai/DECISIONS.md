@@ -302,14 +302,17 @@ a defaulted or placeholder value would satisfy the non-empty check while
 recording nothing. The fixture and tests carry the field. 64 unit tests pass,
 replay 15/15; the new tests fail against the old `checks.py`.
 
-**Consequence, deliberate and not yet resolved: the standing approval is now
-incomplete.** `.ai/tasks/TASK-0042/APPROVAL.json` on `main` has no
-`worker_model`, so once this merges every PR gets a blocking `provenance`
-finding until the approval is re-issued with a value. I did not choose one:
-which model is assigned to TASK-0042 is the owner's decision, and it is a
-sign-off, so the re-approval is left for the owner (as with PR #11).
-`ci_check` reads the approval from the base ref, so this PR's own run is
-judged against the old approval and already shows the finding.
+**Consequence: the standing approval was incomplete, so this PR also
+re-approves.** `main`'s `APPROVAL.json` had no `worker_model`, so every PR got a
+blocking `provenance` finding. The owner chose `worker_model:
+"gemini-3.8-flash"` for TASK-0042 (from the agy CLI banner), and the PR
+regenerates `APPROVAL.json` with it, a new `base_commit` and the unchanged plan
+hash. The agent did not merge it: it is the owner's sign-off, as with PR #11.
+`ci_check` reads the approval from the base ref, so this PR's own run is judged
+against the old approval and shows the `provenance` finding; that is expected
+for a re-approval. Note `gemini-3.8-flash` is not an exact id in `agy models`
+(only `-high`, `-medium`, `-low` variants), and the banner was not checked by
+the agent.
 
 **Limit.** The field is a claim, not evidence. `agy --output-format json` does
 not name the model that answered (VERIFIED.md, agy section), so nothing yet

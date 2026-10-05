@@ -6,7 +6,7 @@ was checked here, with a date. Secondary sources are marked as such.
 | Row | Checked | Result |
 | --- | --- | --- |
 | 1 | 2026-10-05, local, agy 1.2.17 | **Closed locally.** `-p` / `--print` / `--prompt` and `--output-format text\|json\|stream-json` are real (`agy --help`). `--non-interactive` does not exist; the owner reports it came from third-party adapter docs. Unattended `-p` works on this machine with stdin closed, stdout piped or redirected, text or json: 4/4 shapes passed, ~8-9s wall (about 2.5s of it the model turn). The community hang / silent-drop defects did **not** reproduce here. PTY shape not tested (none on Windows). `--print-timeout` bounds the model turn only and reports a timeout as success (see below). Full log below. |
-| 2 | 2026-10-05, local, agy 1.2.17 | **Closed locally; the answer is bad for a credential-free worker.** There is no profile flag. With USERPROFILE, HOME, APPDATA, LOCALAPPDATA and XDG_* pointed at an empty directory, `agy -p` still **succeeded** in 8.6s (`ALIVE`) and created 78 files there. Credentials are therefore reachable from outside the profile directory. Where from is **not established** (Windows Credential Manager is the likely holder but was not tested). A worker container cannot be assumed credential-free with this CLI. |
+| 2 | 2026-10-05, local, agy 1.2.17 | **Closed locally; the answer is bad for a credential-free worker.** There is no profile flag. With USERPROFILE, HOME, APPDATA, LOCALAPPDATA and XDG_* pointed at an empty directory, `agy -p` still **succeeded** in 8.6s (`ALIVE`) and created 44 files in 34 directories there (an earlier draft of this row said 78 files; that count included directories). Credentials are therefore reachable from outside the profile directory. Where from is **not proven**: Windows Credential Manager holds a generic credential `gemini:antigravity` (see the profile inspection below), the probable source, but removing it to test was not done. A worker container cannot be assumed credential-free with this CLI. |
 | 3 | open | Antigravity data-handling terms. |
 | 4 | open | Prompt caching discount and TTL per provider. |
 | 5 | open | Batch endpoint pricing and turnaround. |
@@ -196,3 +196,36 @@ The adapter can use plain subprocess with stdin closed. Build it that way.
 
 Paste this log into .ai/VERIFIED.md with today's date.
 ```
+
+### What agy wrote into an empty profile (row 2 follow-up, 2026-10-05)
+
+Reproduced with USERPROFILE, HOME, APPDATA, LOCALAPPDATA and XDG_* pointed at a
+fresh empty directory; the run succeeded (`ALIVE`). Result: **44 files, 34
+directories, ~14.2 MB**, all under `.gemini\antigravity-cli\` (41 files) and
+`.gemini\config\` (3). Names and sizes only were inspected; contents were not
+read. No file name is credential-like.
+
+- unpacked from the binary: ~18 built-in skill/doc `.md` files, and a 13.6 MB
+  `bin\webm_encoder.exe` (**an executable extracted into the profile**);
+- state: `conversations\<id>.db`, `conversation_summaries.db`,
+  `installation_id`, `jetski_state.pbtxt`, update/lock/timestamp files, a log;
+- **`brain\<id>\.system_generated\logs\transcript*.jsonl`: the prompt and
+  response are persisted to disk** (four copies);
+- `cache\default_project_id.txt`, `config\projects\default-cli-project.json`:
+  a default project was created or fetched; `config\mcp_config.json` is empty.
+
+Credentials were not in the profile. Windows Credential Manager has a generic
+credential `gemini:antigravity` (user `antigravity`), the probable auth source,
+which these environment overrides do not move. For a worker sandbox this means:
+the credential is outside any directory a container would mount, the profile
+accumulates transcripts and an extracted executable, and "empty profile" does
+not mean "unauthenticated".
+
+## Open item — worker_model is an orchestrator assertion
+
+`worker_model` ("gemini-3.8-flash" for TASK-0042) is recorded by the owner from
+the agy CLI banner. It is a claim, not evidence. `agy --output-format json`
+reports `usage` but not the responding model, so nothing binds the recorded
+value to what ran, and `gemini-3.8-flash` is not an exact `agy models` id.
+Anything that verifies the worker's identity has to come from outside the
+worker: the worker cannot be the source of its own provenance.

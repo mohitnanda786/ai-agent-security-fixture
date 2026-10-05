@@ -1,9 +1,11 @@
 {
   "task_id": "TASK-0042",
   "plan_hash": "sha256:f6ac00b51d36a09e459a2a3cdaef5c044d0826c70d0cfc08fb00b93927a9233d",
-  "base_commit": "d04ca23bfeb84f66acb4b90c3c8c0a1815ea2e21",
+  "base_commit": "22541814f6084276ded9b651ad1a3fe15f2b8f58",
   "approval": "APPROVED",
   "plan_reviewer_model": "manual/human",
-  "approved_at": "2026-10-04",
-  "reapproval": "owner-directed re-approval against current main; plan text unchanged; record written by an agent, merge and sign-off by the owner"
+  "approved_at": "2026-10-05",
+  "reapproval": "owner-directed re-approval against current main, adding worker_model; plan text unchanged; record written by an agent, merge and sign-off by the owner",
+  "worker_model": "gemini-3.8-flash",
+  "worker_model_source": "agy CLI banner, as reported by the owner; not machine-verified and not in agy's JSON output"
 }
