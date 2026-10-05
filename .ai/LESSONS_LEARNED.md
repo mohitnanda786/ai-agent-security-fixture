@@ -60,10 +60,18 @@ report:
    failed loudly; it is listed because the cause is the same: the edit did not
    mean what the command said.
 
-The owner reports a further instance of (1)'s kind; it is not recorded in this
-session's history and is not filled in here. Rule: after any edit, check the
-file (`git diff --stat`, a grep for the new text), not the tool's exit status
-or the agent's summary.
+4. **Owner-side, container session.** A `str_replace` on `ci_check.py` reported
+   success and did not apply. Caught by grepping for the new symbol: 5 hits in
+   `checks.py`, 0 in `ci_check.py`.
+
+Four data points. Attribution as sourced: the owner's are (1) and (4); the
+agent's are (2) and (3). Note that (1) and (4) may be one event seen twice: a
+silently failed `str_replace` in the owner's container would explain why the
+shipped archives never contained the `ci_check` fix. That link is a
+hypothesis; neither record establishes it. If they are one event, the count
+of distinct instances is three. Rule: after any edit, check the file
+(`git diff --stat`, a grep for the new text), not the tool's exit status or
+the agent's summary.
 
 ## 2026-10-04 — Positive: an approval was left for the owner to merge
 

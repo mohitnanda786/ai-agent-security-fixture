@@ -87,9 +87,8 @@ Not yet run: the protected-path probe PR (weaken `POLICY.yaml`).
 - **Code-owner review was not demonstrated.** GitHub does not request review
   from a PR's own author, and every CODEOWNERS entry is the owner. Needs a
   second account to open the PR.
-- **`base_binding` re-approval path has never been exercised.** It fired as a
-  block on PRs #2 and #3 (main advanced and touched `ci.yml`), but no
-  re-approval was performed to confirm the path clears.
+- ~~`base_binding` re-approval path has never been exercised.~~ **Closed by
+  PR #11** (see "Re-approval" below).
 
 ## Control defects found during construction — 2026-10-04
 
@@ -101,18 +100,39 @@ tests on `gate.py` passed while `ci_check.py` was broken on `main`. The gap
 was integration coverage, not test count. (The one time the replay did catch a
 regression was a proposed `src/**` scope, 14/15; that was before merge.)
 
-| # | Defect | How it surfaced |
-| --- | --- | --- |
-| 1 | `ci_check` read policy, approval and `PLAN.md` from the checked-out head: a PR was graded by its own `POLICY.yaml` | Reading a verdict: `protected_paths` fired on a file the base policy did not list; confirmed with a debug step that printed base vs working-tree policy |
-| 2 | `protected_paths` enumerated `.ai/` files, not the namespace; later files were unguarded by that layer for five commits | Reading PR #5's verdict: only `scope` fired on `LESSONS_LEARNED.md` |
-| 3 | `pipeline/orchestrator`, `harness`, `tests` in CODEOWNERS but not in `protected_paths` / `trusted_test_paths` | Reading PR #8's verdict: `protected_paths` did not fire on `pipeline/orchestrator/*.py` |
-| 4 | Nine tracked files covered by no layer (CODEOWNERS covered one); `.gitattributes` can change the bytes `plan_hash` covers | A scripted audit of tracked paths against the real policy |
-| 5 | Drift borrowed `protected_paths`: every audit-trail write invalidated the approval, including the one recording the re-approval (six consecutive PRs blocked) | Working through what re-approval would require; confirmed in the re-approval PR |
-| 6 | Drift borrowed `trusted_test_paths`: every orchestrator test change forced a re-approval | PR #13's run after #12 changed two test files |
-| 7 | The pre-existing ruleset required 0 approvals, no code-owner review, no status checks; an Admin `bypass_mode: always` was then added | A rejected push led to reading the ruleset over the API; re-read after an unexplained `updated_at` |
-| 8 | `pipeline-unit-tests` could not import `orchestrator` in CI (bare `pytest`); a control job had never run green | The first CI run on `main` |
+| # | Class | Defect | How it surfaced |
+| --- | --- | --- | --- |
+| 1 | Silently wrong while green | `ci_check` read policy, approval and `PLAN.md` from the checked-out head: a PR was graded by its own `POLICY.yaml` | Reading a verdict: `protected_paths` fired on a file the base policy did not list; confirmed with a debug step that printed base vs working-tree policy |
+| 2 | Silently wrong while green | `protected_paths` enumerated `.ai/` files, not the namespace; later files were unguarded by that layer for five commits | Reading PR #5's verdict: only `scope` fired on `LESSONS_LEARNED.md` |
+| 3 | Silently wrong while green | `pipeline/orchestrator`, `harness`, `tests` in CODEOWNERS but not in `protected_paths` / `trusted_test_paths` | Reading PR #8's verdict: `protected_paths` did not fire on `pipeline/orchestrator/*.py` |
+| 4 | Silently wrong while green | Nine tracked files covered by no layer (CODEOWNERS covered one); `.gitattributes` can change the bytes `plan_hash` covers | A scripted audit of tracked paths against the real policy |
+| 5 | Silently wrong while green | Drift borrowed `protected_paths`: every audit-trail write invalidated the approval, including the one recording the re-approval (six consecutive PRs blocked) | Working through what re-approval would require; confirmed in the re-approval PR |
+| 6 | Silently wrong while green | Drift borrowed `trusted_test_paths`: every orchestrator test change forced a re-approval | PR #13's run after #12 changed two test files |
+| 7 | Silently wrong while green | The pre-existing ruleset required 0 approvals, no code-owner review, no status checks; an Admin `bypass_mode: always` was then added | A rejected push led to reading the ruleset over the API; re-read after an unexplained `updated_at` |
+| 8 | Failed loudly | `pipeline-unit-tests` could not import `orchestrator` in CI (bare `pytest`); a control job had never run green | The first CI run on `main` |
 
-**Stale open item.** "`base_binding` re-approval path has never been
-exercised" (above) is no longer true: it was run (PR #11), and doing so
-exposed defects 5 and 6. What remains untested is a worker credential without
-admin and a second account for code-owner review.
+**The distinction is the finding.** Defect 8 failed loudly: CI went red on
+the first run and was fixed within minutes. Defects 1–7 were silently wrong
+while every check reported green, and the adversarial suite stayed 15/15
+through all of them. Only the second class is interesting, and every one of
+them was found by someone reading an artifact (a verdict, a ruleset, an
+audit), not by a test failing.
+
+## Re-approval — what exercising `base_binding` cost (PR #11)
+
+The re-approval path was run (PR #11) and closed the open item above. What it
+cost: only `APPROVAL.json` changes (new `base_commit`; the plan hash was
+unchanged), and it must be the only thing that changes, because anything else
+under `.ai/` committed after `base_commit` counted as drift at the time.
+Exercising it exposed defects 5 and 6.
+
+**The PR can never pass cleanly.** It is judged against the approval it
+replaces, and that approval is exactly what is stale, so `base_binding`
+blocks it (run 37203177366: `base_binding`, `protected_paths`, `scope`). The
+first re-approval can only go through the owner bypass. This is a property of
+the design, not a bug: an approval cannot vouch for its own replacement, so
+the replacement has to be accepted by a different authority. It should be
+stated as such and not "fixed".
+
+**Still untested:** a worker credential without admin, and a second account
+for code-owner review.
