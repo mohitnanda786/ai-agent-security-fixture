@@ -3,3 +3,5 @@ __pycache__/
 .pytest_cache/
 .venv/
 probe_agy.log
+# enforcement configuration; must not be committed
+ruleset-*.json
